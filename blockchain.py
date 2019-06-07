@@ -17,7 +17,7 @@ def add_transaction(transaction_amount, last_transaction):
         "last_transaction: The last blockchain transaction (default [1]).
     """
     if last_transaction is None:
-        last_transaction = [1]
+        last_transaction = [1.0]
     blockchain.append([last_transaction, transaction_amount])
 
 
@@ -34,14 +34,33 @@ def get_user_choice():
 
 def print_blockhain_elements():
     """ Output the blockchain list to the console """
+    print('-' * 20)
     for block in blockchain:
         print('Outputting block')
         print(block)
+    else:
+        print('-' * 20)
 
-while True:
+
+def verify_chain():
+    """ Checks the block chain integrity """
+    is_valid = True
+    for block_index in range(len(blockchain)):
+        if block_index == 0:
+            continue
+        elif blockchain[block_index][0] == blockchain[block_index - 1]:
+            is_valid = True
+        else:
+            is_valid = False
+            break
+    return is_valid
+
+waiting_for_input = True
+while waiting_for_input:
     print('Please choose:')
     print('1 - Add a new transaction value')
     print('2 - Output the blockhain blocks')
+    print('h - Manipulate the chain')
     print('q - Quit')
 
     user_choice = get_user_choice()
@@ -50,12 +69,18 @@ while True:
         add_transaction(tx_amount, get_last_blockchain_value())
     elif user_choice == '2':
         print_blockhain_elements()
+    elif user_choice == 'h':
+        if len(blockchain) >= 1:
+            blockchain[0] = [2]
     elif user_choice == 'q':
-        break
+        # break
+        waiting_for_input = False
     else:
         print('The input was invalid! Please pick a value from the list!')
         continue
 
-    print('The choice is registered!')
-
-print('Done!')
+    if not verify_chain():
+        print('Invalid blockchain')
+        break
+else:
+    print('Done!')
