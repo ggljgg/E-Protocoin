@@ -17,30 +17,49 @@ def get_last_blockchain_value():
     return blockchain[-1]
 
 
+def get_balance(participant):
+    """  """
+    tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in blockchain]
+    amount_sent = 0
+    for tx in tx_sender:
+        if len(tx) > 0:
+            amount_sent += tx[0]
+
+    tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient'] == participant] for block in blockchain]
+    amount_received = 0
+    for tx in tx_recipient:
+        if len(tx) > 0:
+            amount_received += tx[0]
+
+    return amount_received - amount_sent
+
+
 def hash_block(block):
+    """  """
     return '-'.join([str(block[key]) for key in block])
 
 
-def add_transaction(recepient, sender=owner, amount=1.0):
+def add_transaction(recipient, sender=owner, amount=1.0):
     """ Append a new value as well as the last blockchain value to the blockchain.
 
     Arguments:
         :sender: The coins sender.
-        :recepient: The coins recepient.
+        :recipient: The coins recipient.
         :amount: The coins amount sent with transaction (default = 1.0).
     """
     transaction = {
-        'senser': sender,
-        'recepient': recepient,
+        'sender': sender,
+        'recipient': recipient,
         'amount': amount
     }
 
     open_transactions.append(transaction)
     participants.add(sender)
-    participants.add(recepient)
+    participants.add(recipient)
 
 
 def mine_block():
+    """  """
     last_block = blockchain[-1]
     hashed_block = hash_block(last_block)
 
@@ -51,13 +70,14 @@ def mine_block():
     }
 
     blockchain.append(block)
+    return True
 
 
 def get_transaction_data():
     """ Returns a new transaction data. """
-    tx_recepient = input('Enter the transaction recepient: ')
+    tx_recipient = input('Enter the transaction recipient: ')
     tx_amount = float(input('Enter your transaction amount: '))
-    return (tx_recepient, tx_amount)
+    return (tx_recipient, tx_amount)
 
 
 def get_user_choice():
@@ -97,11 +117,11 @@ while waiting_for_input:
     user_choice = get_user_choice()
     if user_choice == '1':
         tx_data = get_transaction_data()
-        recepient, amount = tx_data
-        add_transaction(recepient, amount=amount)
-        print(open_transactions)
+        recipient, amount = tx_data
+        add_transaction(recipient, amount=amount)
     elif user_choice == '2':
-        mine_block()
+        if mine_block():
+            open_transactions = []
     elif user_choice == '3':
         print_blockhain_elements()
     elif user_choice == '4':
@@ -112,8 +132,8 @@ while waiting_for_input:
                 'previous_hash': '',
                 'index': 0,
                 'transactions': [{
-                    'senser': 'sender',
-                    'recepient': 'recepient',
+                    'sender': 'sender',
+                    'recipient': 'recipient',
                     'amount': 1000
                 }]
             }
@@ -127,6 +147,8 @@ while waiting_for_input:
         print('Invalid blockchain!')
         print_blockhain_elements()
         break
+
+    print(get_balance('Dan'))
 else:
     print('The user left!')
 
