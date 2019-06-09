@@ -1,3 +1,5 @@
+MINING_REWARD = 25
+
 genesis_block = {
     'previous_hash': '',
     'index': 0,
@@ -63,13 +65,20 @@ def mine_block():
     last_block = blockchain[-1]
     hashed_block = hash_block(last_block)
 
+    reward_transaction = {
+        'sender': 'REWARDING SYSTEM',
+        'recipient': owner,
+        'amount': MINING_REWARD
+    }
+    open_transactions.append(reward_transaction)
+
     block = {
         'previous_hash': hashed_block,
         'index': len(blockchain),
         'transactions': open_transactions
     }
-
     blockchain.append(block)
+
     return True
 
 
