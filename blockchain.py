@@ -1,3 +1,7 @@
+import functools
+import hashlib
+import json
+
 MINING_REWARD = 25
 
 genesis_block = {
@@ -20,29 +24,29 @@ def get_last_blockchain_value():
 
 
 def get_balance(participant):
-    """ Returns the participant's balance """
+    """ Calculates and returns the participant's balance.
+
+    Arguments:
+        :participant: The person for whom to calculate the balance.
+    """
     tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in blockchain]
     open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender'] == participant]
     tx_sender.append(open_tx_sender)
-    amount_sent = 0
-
-    for tx in tx_sender:
-        if len(tx) > 0:
-            amount_sent += tx[0]
+    amount_sent = functools.reduce(lambda tx_sum, tx_amt: tx_sum + sum(tx_amt) if len(tx_amt) > 0 else tx_sum, tx_sender, 0)
 
     tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient'] == participant] for block in blockchain]
-    amount_received = 0
-
-    for tx in tx_recipient:
-        if len(tx) > 0:
-            amount_received += tx[0]
+    amount_received = functools.reduce(lambda tx_sum, tx_amt: tx_sum + sum(tx_amt) if len(tx_amt) > 0 else tx_sum, tx_recipient, 0)
 
     return amount_received - amount_sent
 
 
 def hash_block(block):
-    """ Generates a hash for the block """
-    return '-'.join([str(block[key]) for key in block])
+    """ Hashes a block and returns a string representation of it.
+
+    Arguments:
+        :block: The block that should be hashed.
+     """
+    return hashlib.sha256(json.dumps(block).encode()).hexdigest()
 
 
 def add_transaction(recipient, sender=owner, amount=1.0):
@@ -70,7 +74,8 @@ def add_transaction(recipient, sender=owner, amount=1.0):
 
 
 def mine_block():
-    """ Creates a new block for the block chain """
+    """ Creates a new block for the block chain and
+    adds open transactions to it. """
     last_block = blockchain[-1]
     hashed_block = hash_block(last_block)
 
@@ -101,13 +106,17 @@ def get_transaction_data():
 
 
 def verify_transaction(transaction):
-    """ Verify the current transaction """
+    """ Verify a current transaction.
+
+    Arguments:
+        :transaction: The transaction that should be verified.
+    """
     sender_balance = get_balance(transaction['sender'])
     return sender_balance >= transaction['amount']
 
 
 def verify_chain():
-    """ Verify the block chain integrity """
+    """ Verify the block chain integrity. """
     for (index, block) in enumerate(blockchain):
         if index == 0:
             continue
@@ -117,17 +126,17 @@ def verify_chain():
 
 
 def verify_transactions():
-    """ Verify the all open transactions """
+    """ Verify the all open transactions. """
     return all([verify_transaction(tx) for tx in open_transactions])
 
 
 def get_user_choice():
-    """ Returns the choice of the user """
+    """ Returns the choice of the user. """
     return input('Your choice: ')
 
 
 def print_blockhain_elements():
-    """ Output the blockchain list to the console """
+    """ Output the blockchain list to the console. """
     print('-' * 20)
     for block in blockchain:
         print('Outputting block')
@@ -189,7 +198,7 @@ while waiting_for_input:
         print_blockhain_elements()
         break
 
-    print(get_balance('Dan'))
+    print('Balance of {}: {:6.2f}'.format('Dan', get_balance('Dan')))
 else:
     print('The user left!')
 
