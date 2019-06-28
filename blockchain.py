@@ -1,13 +1,15 @@
 import functools
 import hashlib
 import json
+from collections import OrderedDict
 
 MINING_REWARD = 25
 
 genesis_block = {
     'previous_hash': '',
     'index': 0,
-    'transactions': []
+    'transactions': [],
+    'proof': 100
 }
 
 blockchain = [genesis_block]
@@ -16,8 +18,8 @@ owner = 'Dan'
 participants = {'Dan'}
 
 
-def get_last_blockchain_value():
-    """ Returns the last value of the current blockchain. """
+def get_last_block():
+    """ Returns a last block of the current blockchain. """
     if len(blockchain) == 0:
         return None
     return blockchain[-1]
@@ -46,7 +48,25 @@ def hash_block(block):
     Arguments:
         :block: The block that should be hashed.
      """
-    return hashlib.sha256(json.dumps(block).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(block, sort_keys=True).encode()
+                          ).hexdigest()
+
+
+def valid_proof(transactions, last_hash, proof):
+    """ """
+    guess = (str(transactions) + str(last_hash) + str(proof)).encode()
+    guess_hash = hashlib.sha256(guess).hexdigest()
+    # print(guess_hash)
+    return guess_hash[0:2] == '00'
+
+
+def proof_of_work():
+    """ """
+    last_hash = hash_block(get_last_block())
+    proof = 0
+    while not valid_proof(open_transactions, last_hash, proof):
+        proof += 1
+    return proof
 
 
 def add_transaction(recipient, sender=owner, amount=1.0):
@@ -58,11 +78,14 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         :recipient: The coins recipient.
         :amount: The coins amount sent with transaction (default = 1.0).
     """
-    transaction = {
-        'sender': sender,
-        'recipient': recipient,
-        'amount': amount
-    }
+    # transaction = {
+    #     'sender': sender,
+    #     'recipient': recipient,
+    #     'amount': amount
+    # }
+    transaction = OrderedDict([('sender', sender),
+                               ('recipient', recipient),
+                               ('amount', amount)])
 
     if verify_transaction(transaction):
         open_transactions.append(transaction)
@@ -76,25 +99,27 @@ def add_transaction(recipient, sender=owner, amount=1.0):
 def mine_block():
     """ Creates a new block for the block chain and
     adds open transactions to it. """
-    last_block = blockchain[-1]
-    hashed_block = hash_block(last_block)
+    hashed_block = hash_block(get_last_block())
+    proof = proof_of_work()
 
-    reward_transaction = {
-        'sender': 'REWARDING SYSTEM',
-        'recipient': owner,
-        'amount': MINING_REWARD
-    }
-
+    # reward_transaction = {
+    #     'sender': 'REWARDING SYSTEM',
+    #     'recipient': owner,
+    #     'amount': MINING_REWARD
+    # }
+    reward_transaction = OrderedDict([('sender', 'REWARDING SYSTEM'),
+                                      ('recipient', owner),
+                                      ('amount', MINING_REWARD)])
     copied_transactions = open_transactions[:]
     copied_transactions.append(reward_transaction)
 
     block = {
         'previous_hash': hashed_block,
         'index': len(blockchain),
-        'transactions': copied_transactions
+        'transactions': copied_transactions,
+        'proof': proof
     }
     blockchain.append(block)
-
     return True
 
 
@@ -121,6 +146,11 @@ def verify_chain():
         if index == 0:
             continue
         if block['previous_hash'] != hash_block(blockchain[index - 1]):
+            return False
+        if not valid_proof(block['transactions'][:-1],
+                           block['previous_hash'],
+                           block['proof']):
+            print('Proof of work is invalid!')
             return False
     return True
 
