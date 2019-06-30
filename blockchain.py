@@ -42,26 +42,35 @@ def get_balance(participant):
     return amount_received - amount_sent
 
 
+def hash_string_256(string):
+    """ Returns a hash of string. """
+    return hashlib.sha256(string).hexdigest()
+
+
 def hash_block(block):
     """ Hashes a block and returns a string representation of it.
 
     Arguments:
         :block: The block that should be hashed.
      """
-    return hashlib.sha256(json.dumps(block, sort_keys=True).encode()
-                          ).hexdigest()
+    return hash_string_256(json.dumps(block, sort_keys=True).encode())
 
 
 def valid_proof(transactions, last_hash, proof):
-    """ """
+    """ Checks that the proof (nonce) is correctly guessed.
+
+    Arguments:
+        :transactions: All open transactions which will be included in the new block.
+        :last_hash: The hash of the previous block in the block chain.
+        :proof (nonce): A random integer number.
+    """
     guess = (str(transactions) + str(last_hash) + str(proof)).encode()
     guess_hash = hashlib.sha256(guess).hexdigest()
-    # print(guess_hash)
     return guess_hash[0:2] == '00'
 
 
 def proof_of_work():
-    """ """
+    """  """
     last_hash = hash_block(get_last_block())
     proof = 0
     while not valid_proof(open_transactions, last_hash, proof):
@@ -78,11 +87,6 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         :recipient: The coins recipient.
         :amount: The coins amount sent with transaction (default = 1.0).
     """
-    # transaction = {
-    #     'sender': sender,
-    #     'recipient': recipient,
-    #     'amount': amount
-    # }
     transaction = OrderedDict([('sender', sender),
                                ('recipient', recipient),
                                ('amount', amount)])
@@ -92,7 +96,6 @@ def add_transaction(recipient, sender=owner, amount=1.0):
         participants.add(sender)
         participants.add(recipient)
         return True
-
     return False
 
 
@@ -102,11 +105,6 @@ def mine_block():
     hashed_block = hash_block(get_last_block())
     proof = proof_of_work()
 
-    # reward_transaction = {
-    #     'sender': 'REWARDING SYSTEM',
-    #     'recipient': owner,
-    #     'amount': MINING_REWARD
-    # }
     reward_transaction = OrderedDict([('sender', 'REWARDING SYSTEM'),
                                       ('recipient', owner),
                                       ('amount', MINING_REWARD)])
