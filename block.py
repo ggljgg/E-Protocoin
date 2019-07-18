@@ -2,7 +2,6 @@ from time import time
 
 class Block:
     """ """
-    # __slots__ = ('__index', '__previous_hash', '__transactions', '__proof', '__timestamp')
 
     def __init__(self, index, previous_hash, transactions, proof, time=time()):
         self.__index = index
