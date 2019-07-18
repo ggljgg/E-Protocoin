@@ -2,9 +2,9 @@ import functools
 import json
 
 from block import Block
-from hash_util import hash_block
 from transaction import Transaction
-from verification import VerificationHelper
+from utility.hash_util import hash_block
+from utility.verification import VerificationHelper
 
 MINING_REWARD = 25
 
@@ -177,10 +177,13 @@ class Blockchain:
         """ Saves the current blockhain and open transactions snapshot to a file. """
         try:
             with open(file='blockchain.dat', mode='w', encoding='utf-8') as f:
-                saveable_blockchain = [block.__dict__ for block in self.__chain]
+                saveable_blockchain = [block.__dict__ for block in [Block(block.index,block.previous_hash,[tx.__dict__ for tx in block.transactions],block.proof,block.timestamp) for block in self.__chain]]
+
                 f.write(json.dumps(saveable_blockchain))
                 f.write('\n')
+
                 saveable_transactions = [tx.__dict__ for tx in self.__open_transactions]
+
                 f.write(json.dumps(saveable_transactions))
                 print('Saving is done successfully!')
         except IOError:

@@ -1,6 +1,6 @@
 from uuid import uuid4
 from blockchain import Blockchain
-from verification import VerificationHelper
+from utility.verification import VerificationHelper
 
 class Node:
     """ """
@@ -35,8 +35,7 @@ class Node:
             print('1 - Add a new transaction')
             print('2 - Mine a new block')
             print('3 - Output the blockhain blocks')
-            # print('4 - Output the participants')
-            print('5 - Check transaction validity')
+            print('4 - Check transaction validity')
             print('q - Quit')
 
             user_choice = self.get_user_choice()
@@ -53,9 +52,7 @@ class Node:
                 self.__blockchain.mine_block()
             elif user_choice == '3':
                 self.print_blockhain_elements()
-            # elif user_choice == '4':
-            #     print(participants)
-            elif user_choice == '5':
+            elif user_choice == '4':
                 if VerificationHelper.verify_transactions(self.__blockchain.open_transactions, self.__blockchain.get_balance):
                     print('All transactions are valid.')
                 else:

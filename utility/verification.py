@@ -1,4 +1,4 @@
-from hash_util import hash_block, hash_string_256
+from .hash_util import hash_block, hash_string_256
 
 class VerificationHelper:
     """ """
@@ -55,6 +55,4 @@ class VerificationHelper:
             :transaction: The transaction that should be verified.
             :get_balance: ...
         """
-        return all([cls.verify_transaction(tx, get_balance) for tx in transactions])
-
-    
+        return all([cls.verify_transaction(tx, get_balance) for tx in transactions])  
