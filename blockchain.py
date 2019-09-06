@@ -1,5 +1,5 @@
-import functools
 import json
+import functools
 
 from block import Block
 from transaction import Transaction
@@ -29,9 +29,6 @@ class Blockchain:
     @property
     def open_transactions(self):
         return self.__open_transactions[:]
-
-# owner = 'Dan'
-# participants = {'Dan'}
 
     def get_last_block(self):
         """ Returns a last block of the current blockchain. """
@@ -97,10 +94,7 @@ class Blockchain:
 
         if VerificationHelper.verify_transaction(transaction, self.get_balance):
             self.__open_transactions.append(transaction)
-            # participants.add(sender)
-            # participants.add(recipient)
-            
-            # self.__save_data()
+            self.__save_data()
             return True
         return False
 
@@ -128,8 +122,34 @@ class Blockchain:
         
         self.__chain.append(block)
         self.__open_transactions = []
-        # self.__save_data()
+        self.__save_data()
         return True
+
+    def __loadable_transactions(self, transactions):
+        """ """
+        return [
+            Transaction(
+                tx['sender'],
+                tx['recipient'],
+                tx['amount']
+            )
+            for tx in transactions
+        ]
+
+    def __loadable_blockchain(self, blockchain):
+        """ """
+        updated_blockchain = []
+        for block in blockchain:
+            converted_tx = self.__loadable_transactions(block['transactions'])
+            updated_block = Block(
+                block['index'],
+                block['previous hash'],
+                converted_tx,
+                block['proof'],
+                block['timestamp']
+            )
+            updated_blockchain.append(updated_block)
+        return updated_blockchain
 
     def __load_data(self):
         """ Initializes a blockhain and open transactions from a file. """
@@ -138,53 +158,44 @@ class Blockchain:
                 file_content = f.readlines()
                 blockchain = json.loads(file_content[0][:-1])
                 open_transactions = json.loads(file_content[1])
-
-                updated_blockchain = []
-                for block in blockchain:
-                    converted_tx = [Transaction(tx['sender'],
-                                                tx['recipient'],
-                                                tx['amount'])
-                                    for tx in block['transactions']]
-
-                    updated_block = Block(
-                        block['index'],
-                        block['previous_hash'],
-                        converted_tx,
-                        block['proof'],
-                        block['timestamp']
-                    )
-                    updated_blockchain.append(updated_block)
-                self.chain = updated_blockchain
-
-                updated_transactions = []
-                for tx in open_transactions:
-                    updated_transaction = Transaction(
-                        tx['sender'],
-                        tx['recipient'],
-                        tx['amount']
-                    )
-                    updated_transactions.append(updated_transaction)
-                self.__open_transactions = updated_transactions
-                
-        # ################################### 
-                print('Data are loaded successfully!')
+                self.chain = self.__loadable_blockchain(blockchain)
+                self.__open_transactions = self.__loadable_transactions(open_transactions)
+            print('\nData are loaded from source successfully!\n')
         except (IOError, IndexError):
-            print('Data aren\'t loaded!')
-        finally:
-            print('Default data are loaded successfully!')
+            print(
+                '\nData aren\'t loaded from source!\n'
+                'Default data are loaded successfully!\n'
+            )
+
+    def __saveable_transactions(self, transactions):
+        """ """
+        return [tx.to_dict() for tx in transactions]
+
+    def __saveable_blockchain(self, blockchain):
+        """ """
+        updated_blockchain = []
+        for block in blockchain:
+            transactions = self.__saveable_transactions(block.transactions)
+            updated_blockchain.append(
+                Block(
+                    block.index,
+                    block.previous_hash,
+                    transactions,
+                    block.proof,
+                    block.timestamp
+                )
+            )
+        return [block.to_dict() for block in updated_blockchain]
 
     def __save_data(self):
         """ Saves the current blockhain and open transactions snapshot to a file. """
         try:
             with open(file='blockchain.dat', mode='w', encoding='utf-8') as f:
-                saveable_blockchain = [block.__dict__ for block in [Block(block.index,block.previous_hash,[tx.__dict__ for tx in block.transactions],block.proof,block.timestamp) for block in self.__chain]]
-
+                saveable_blockchain = self.__saveable_blockchain(self.__chain)
                 f.write(json.dumps(saveable_blockchain))
                 f.write('\n')
-
-                saveable_transactions = [tx.__dict__ for tx in self.__open_transactions]
-
+                saveable_transactions = self.__saveable_transactions(self.__open_transactions)
                 f.write(json.dumps(saveable_transactions))
-                print('Saving is done successfully!')
+                print('\nSaving is done successfully!\n')
         except IOError:
-            print('Saving is failed!')
+            print('\nSaving is failed!\n')

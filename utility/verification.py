@@ -12,10 +12,8 @@ class VerificationHelper:
             :last_hash: The hash of the previous block in the block chain.
             :proof (nonce): A random integer number.
         """
-        guess = (str(tx.__dict__ for tx in transactions) + str(last_hash) + str(proof)).encode()
-        guess_hash = hash_string_256(guess) 
-        # можно попробовать избавиться от промежуточной переменной guess_hash
-        return guess_hash[0:2] == '00'
+        guess = (str([tx for tx in transactions]) + str(last_hash) + str(proof)).encode()
+        return hash_string_256(guess)[0:2] == '00'
 
     @classmethod
     def verify_chain(cls, blockchain):

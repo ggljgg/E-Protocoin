@@ -21,12 +21,19 @@ class Node:
 
     def print_blockhain_elements(self):
         """ Output the blockchain list to the console. """
-        print('-' * 20)
+        print('-' * 25)
         for block in self.__blockchain.chain:
-            print('Outputting block')
             print(block)
-        else:
-            print('-' * 20)
+            print('-' * 25)
+
+    def print_open_transactions(self):
+        """ """
+        print('-' * 23)
+        print('{:-^23}'.format('Open transactions'))
+        print('-' * 23)
+        for tx in self.__blockchain.open_transactions:
+            print(tx)
+            print('-' * 23)
 
     def listen_for_input(self):
         """ """
@@ -35,37 +42,38 @@ class Node:
             print('1 - Add a new transaction')
             print('2 - Mine a new block')
             print('3 - Output the blockhain blocks')
-            print('4 - Check transaction validity')
+            print('4 - Check transactions validity')
             print('q - Quit')
 
             user_choice = self.get_user_choice()
             if user_choice == '1':
                 tx_data = self.get_transaction_data()
                 recipient, amount = tx_data
+
                 if self.__blockchain.add_transaction(recipient, self.__id, amount=amount):
-                    print('Transaction is added!')
+                    print('\nTransaction is added successful!\n')
                 else:
-                    print('Transaction is failed!')
-                # можно добавить распечатку открытых транзакций
-                # print(self.__blockchain.open_transactions)
+                    print('\nTransaction is failed!\n')
+
+                self.print_open_transactions()
             elif user_choice == '2':
                 self.__blockchain.mine_block()
             elif user_choice == '3':
                 self.print_blockhain_elements()
             elif user_choice == '4':
                 if VerificationHelper.verify_transactions(self.__blockchain.open_transactions, self.__blockchain.get_balance):
-                    print('All transactions are valid.')
+                    print('\nAll transactions are valid.\n')
                 else:
-                    print('There are invalid transactions!')
+                    print('\nThere are invalid transactions!\n')
             elif user_choice == 'q':
-                print('The user left!')
+                print('\nThe user left!\n')
                 break
             else:
-                print('The input was invalid! Please pick a value from the list!')
+                print('\nThe input was invalid! Please pick a value from the list!\n')
                 continue
 
             if not VerificationHelper.verify_chain(self.__blockchain.chain):
-                print('Invalid blockchain!')
+                print('\nInvalid blockchain!\n')
                 self.print_blockhain_elements()
                 break
 

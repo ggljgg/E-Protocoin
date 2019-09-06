@@ -1,5 +1,5 @@
-import hashlib
 import json
+import hashlib
 
 
 def hash_string_256(string):
@@ -13,7 +13,6 @@ def hash_block(block):
     Arguments:
         :block: The block that should be hashed.
     """
-    hashable_block = block.__dict__.copy()
-    # обращение к атрибутам блока зависит от их "скрытости" для внешних интерфейсов
-    hashable_block['_Block__transactions'] = [tx.__dict__ for tx in hashable_block['_Block__transactions']]
+    hashable_block = block.to_dict()
+    hashable_block['transactions'] = [tx.to_dict() for tx in hashable_block['transactions']]
     return hash_string_256(json.dumps(hashable_block, sort_keys=True).encode())
