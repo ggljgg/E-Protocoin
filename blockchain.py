@@ -2,6 +2,7 @@ import json
 import functools
 
 from block import Block
+from wallet import Wallet
 from transaction import Transaction
 from utility.hash_util import hash_block
 from utility.verification import VerificationHelper
@@ -77,19 +78,23 @@ class Blockchain:
             proof += 1
         return proof
 
-    def add_transaction(self, recipient, sender, amount=1.0):
-        """ Appends a new transaction to the open transaction list and
-        transaction participants to the participant set.
+    def add_transaction(self, recipient, sender, amount, signature):
+        """ Appends a new transaction to the open transaction list.
 
         Arguments:
             :sender: The coins sender.
             :recipient: The coins recipient.
-            :amount: The coins amount sent with transaction (default = 1.0).
+            :signature: ...
+            :amount: The coins amount sent with transaction.
         """
+        if self.__hosting_node is None:
+            return False
+
         transaction = Transaction(
             sender,
             recipient,
-            amount
+            amount,
+            signature
         )
 
         if VerificationHelper.verify_transaction(transaction, self.get_balance):
@@ -101,16 +106,24 @@ class Blockchain:
     def mine_block(self):
         """ Creates a new block for the block chain and
         adds open transactions to it. """
+        if self.__hosting_node is None:
+            return False
+        
         last_hash = hash_block(self.get_last_block())
         proof = self.proof_of_work(last_hash)
 
         reward_transaction = Transaction(
             'REWARDING SYSTEM',
             self.__hosting_node,
-            MINING_REWARD
+            MINING_REWARD,
+            ''
         )
 
         copied_transactions = self.__open_transactions[:]
+
+        if not VerificationHelper.verify_transactions(copied_transactions, self.get_balance):
+            return False
+
         copied_transactions.append(reward_transaction)
 
         block = Block(
@@ -131,7 +144,8 @@ class Blockchain:
             Transaction(
                 tx['sender'],
                 tx['recipient'],
-                tx['amount']
+                tx['amount'],
+                tx['signature']
             )
             for tx in transactions
         ]

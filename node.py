@@ -1,4 +1,4 @@
-from uuid import uuid4
+from wallet import Wallet
 from blockchain import Blockchain
 from utility.verification import VerificationHelper
 
@@ -6,34 +6,8 @@ class Node:
     """ """
 
     def __init__(self):
-        self.__id = str(uuid4())
-        self.__blockchain = Blockchain(self.__id)
-
-    def get_transaction_data(self):
-        """ Returns a new transaction data. """
-        tx_recipient = input('Enter the transaction recipient: ')
-        tx_amount = float(input('Enter your transaction amount: '))
-        return (tx_recipient, tx_amount)
-
-    def get_user_choice(self):
-        """ Returns the choice of the user. """
-        return input('Your choice: ')
-
-    def print_blockhain_elements(self):
-        """ Output the blockchain list to the console. """
-        print('-' * 25)
-        for block in self.__blockchain.chain:
-            print(block)
-            print('-' * 25)
-
-    def print_open_transactions(self):
-        """ """
-        print('-' * 23)
-        print('{:-^23}'.format('Open transactions'))
-        print('-' * 23)
-        for tx in self.__blockchain.open_transactions:
-            print(tx)
-            print('-' * 23)
+        self.__wallet = Wallet()
+        self.__blockchain = Blockchain(self.__wallet.public_key)
 
     def listen_for_input(self):
         """ """
@@ -43,28 +17,45 @@ class Node:
             print('2 - Mine a new block')
             print('3 - Output the blockhain blocks')
             print('4 - Check transactions validity')
+            # print('5 - Create a new wallet')
+            print('6 - Load wallet')
+            print('7 - Save wallet')
             print('q - Quit')
 
-            user_choice = self.get_user_choice()
+            user_choice = self.__get_user_choice()
             if user_choice == '1':
-                tx_data = self.get_transaction_data()
+                tx_data = self.__get_transaction_data()
                 recipient, amount = tx_data
+                signature = self.__wallet.sign_transaction(
+                    recipient,
+                    self.__wallet.public_key,
+                    amount
+                )
 
-                if self.__blockchain.add_transaction(recipient, self.__id, amount=amount):
+                if self.__blockchain.add_transaction(recipient, self.__wallet.public_key, amount, signature):
                     print('\nTransaction is added successful!\n')
                 else:
                     print('\nTransaction is failed!\n')
 
-                self.print_open_transactions()
+                self.__print_open_transactions()
             elif user_choice == '2':
-                self.__blockchain.mine_block()
+                if not self.__blockchain.mine_block():
+                    print('You don\'t have a wallet!')
             elif user_choice == '3':
-                self.print_blockhain_elements()
+                self.__print_blockhain_elements()
             elif user_choice == '4':
                 if VerificationHelper.verify_transactions(self.__blockchain.open_transactions, self.__blockchain.get_balance):
-                    print('\nAll transactions are valid.\n')
+                    print('\nAll transactions are valid!\n')
                 else:
                     print('\nThere are invalid transactions!\n')
+            # elif user_choice == '5':
+            #     self.__wallet = Wallet()
+            #     self.__blockchain = Blockchain(self.__wallet.public_key)
+            elif user_choice == '6':
+                self.__wallet.load_keys()
+                self.__blockchain = Blockchain(self.__wallet.public_key)
+            elif user_choice == '7':
+                self.__wallet.save_keys()
             elif user_choice == 'q':
                 print('\nThe user left!\n')
                 break
@@ -74,7 +65,36 @@ class Node:
 
             if not VerificationHelper.verify_chain(self.__blockchain.chain):
                 print('\nInvalid blockchain!\n')
-                self.print_blockhain_elements()
+                self.__print_blockhain_elements()
                 break
 
-            print('Balance of {}: {:6.2f}'.format(self.__id, self.__blockchain.get_balance()))
+            print('Balance of {}: {:6.2f}\n'.format(
+                self.__wallet.public_key,
+                self.__blockchain.get_balance())
+            )
+
+    def __get_transaction_data(self):
+        """ Returns a new transaction data. """
+        tx_recipient = input('Enter the transaction recipient: ')
+        tx_amount = float(input('Enter your transaction amount: '))
+        return (tx_recipient, tx_amount)
+
+    def __get_user_choice(self):
+        """ Returns the choice of the user. """
+        return input('Your choice: ')
+
+    def __print_blockhain_elements(self):
+        """ Output the blockchain list to the console. """
+        print('-' * 100)
+        for block in self.__blockchain.chain:
+            print(block)
+            print('-' * 100)
+
+    def __print_open_transactions(self):
+        """ """
+        print('-' * 50)
+        print('{:-^50}'.format('Open transactions'))
+        print('-' * 50)
+        for tx in self.__blockchain.open_transactions:
+            print(tx)
+            print('-' * 50)
