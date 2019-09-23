@@ -59,5 +59,5 @@ class Block:
             'previous hash': self.__previous_hash,
             'proof': self.__proof,
             'timestamp': self.__timestamp,
-            'transactions': self.__transactions
+            'transactions': [tx.to_dict() for tx in self.__transactions]
         }

@@ -1,7 +1,7 @@
 from wallet import Wallet
 from .hash_util import hash_block, hash_string_256
 
-class VerificationHelper:
+class Verifier:
     """ """
 
     @staticmethod
@@ -44,8 +44,7 @@ class VerificationHelper:
             :get_balance: ...
         """
         if check_funds:
-            sender_balance = get_balance()
-            return sender_balance >= transaction.amount and Wallet.verify_transaction(transaction)
+            return get_balance() >= transaction.amount and Wallet.verify_transaction(transaction)
         else:
             return Wallet.verify_transaction(transaction)
 
