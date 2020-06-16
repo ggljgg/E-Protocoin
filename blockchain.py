@@ -15,6 +15,7 @@ class Blockchain:
         self.__chain = [genesis_block]
         self.__open_transactions = []
         self.__hosting_node = hosting_node_id
+        self.__peer_nodes = set()
         self.__load_data()
 
     @property
@@ -32,6 +33,10 @@ class Blockchain:
     def open_transactions_to_list(self):
         """ """
         return [tx.to_dict() for tx in self.__open_transactions]
+
+    def peer_nodes_to_list(self):
+        """ """
+        return [node for node in self.__peer_nodes]
 
     def get_last_block(self):
         """ Returns a last block of the current blockchain. """
@@ -67,6 +72,16 @@ class Blockchain:
                                         tx_recipient, 0)
 
         return amount_received - amount_sent
+
+    def add_peer_node(self, node):
+        """ """
+        self.__peer_nodes.add(node)
+        self.__save_data()
+
+    def remove_peer_node(self, node):
+        """ """
+        self.__peer_nodes.discard(node)
+        self.__save_data()
 
     def add_transaction(self, recipient, sender, amount, signature):
         """ Appends a new transaction to the open transaction list.
@@ -151,9 +166,11 @@ class Blockchain:
 
                 blockchain = json.loads(file_content[0][:-1])
                 open_transactions = json.loads(file_content[1][:-1])
+                peer_nodes = json.loads(file_content[2][:-1])
 
                 self.__chain = self.__loadable_blockchain(blockchain)
                 self.__open_transactions = self.__loadable_transactions(open_transactions)
+                self.__peer_nodes = self.__loadable_peer_nodes(peer_nodes)
 
             print('\nData are loaded from source successfully!\n')
         except (IOError, IndexError):
@@ -166,7 +183,8 @@ class Blockchain:
         """ Saves the current blockhain and open transactions snapshot to a file. """
         prepared_data = (
             self.to_list(self.__chain),
-            self.open_transactions_to_list()
+            self.open_transactions_to_list(),
+            self.peer_nodes_to_list()
         )
         
         try:
@@ -210,3 +228,7 @@ class Blockchain:
             self.__loadable_block(block)
             for block in blockchain
         ]
+
+    def __loadable_peer_nodes(self, peer_nodes):
+        """ """
+        return {peer_node for peer_node in peer_nodes}
