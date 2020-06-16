@@ -7,9 +7,10 @@ from Crypto.Signature import PKCS1_v1_5
 class Wallet:
     """ """
 
-    def __init__(self):
+    def __init__(self, node_id):
         self.__private_key = None
         self.__public_key = None
+        self.__node_id = node_id
 
     @property
     def public_key(self):
@@ -46,7 +47,7 @@ class Wallet:
         """ """
         if not (self.__public_key is None and self.__private_key is None):
             try:
-                with open('wallet.dat', mode='w', encoding='utf-8') as f:
+                with open('wallet-{}.dat'.format(self.__node_id), mode='w', encoding='utf-8') as f:
                     f.write(self.__public_key)
                     f.write('\n')
                     f.write(self.__private_key)
@@ -58,7 +59,7 @@ class Wallet:
     def load_keys(self):
         """ """
         try:
-            with open('wallet.dat', mode='r', encoding='utf-8') as f:
+            with open('wallet-{}.dat'.format(self.__node_id), mode='r', encoding='utf-8') as f:
                 keys = f.readlines()
                 self.__public_key = keys[0][:-1]
                 self.__private_key = keys[1]

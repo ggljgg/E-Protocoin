@@ -1,4 +1,5 @@
 import json
+import requests
 import functools
 from block import Block
 from transaction import Transaction
@@ -10,12 +11,14 @@ MINING_REWARD = 25
 class Blockchain:
     """ """
 
-    def __init__(self, hosting_node_id):
+    def __init__(self, public_key, node_id):
         genesis_block = Block(0, '', [], 100)
         self.__chain = [genesis_block]
         self.__open_transactions = []
-        self.__hosting_node = hosting_node_id
+        self.__public_key = public_key
+        self.__node_id = node_id
         self.__peer_nodes = set()
+        self.__resolve_conflicts = False
         self.__load_data()
 
     @property
@@ -25,6 +28,14 @@ class Blockchain:
     @property
     def open_transactions(self):
         return self.__open_transactions[:]
+
+    @property
+    def resolve_conflicts(self):
+        return self.__resolve_conflicts
+
+    @resolve_conflicts.setter
+    def resolve_conflicts(self, resolve_conflicts):
+        self.__resolve_conflicts = resolve_conflicts
 
     def to_list(self, blockchain):
         """ """
@@ -44,12 +55,18 @@ class Blockchain:
             return None
         return self.__chain[-1]
 
-    def get_balance(self):
-        """ Calculates and returns the participant's balance. """
-        if self.__hosting_node is None:
-            return None
-
-        participant = self.__hosting_node
+    def get_balance(self, sender=None):
+        """ Calculates and returns the participant's balance. 
+        
+        Arguments:
+            :sender: The coins sender.
+        """
+        if not sender is None:
+            participant = sender
+        else:
+            if self.__public_key is None:
+                return None
+            participant = self.__public_key
 
         tx_sender = [[tx.amount
                     for tx in block.transactions
@@ -83,7 +100,7 @@ class Blockchain:
         self.__peer_nodes.discard(node)
         self.__save_data()
 
-    def add_transaction(self, recipient, sender, amount, signature):
+    def add_transaction(self, recipient, sender, amount, signature, is_receiving=False):
         """ Appends a new transaction to the open transaction list.
 
         Arguments:
@@ -92,8 +109,9 @@ class Blockchain:
             :signature: ...
             :amount: The coins amount sent with transaction.
         """
-        if self.__hosting_node is None:
-            return None
+        # does not need anymore
+        # if self.__public_key is None:
+        #     return None
 
         transaction = Transaction(
             sender,
@@ -105,6 +123,24 @@ class Blockchain:
         if Verifier.verify_transaction(transaction, self.get_balance):
             self.__open_transactions.append(transaction)
             self.__save_data()
+
+            if not is_receiving:
+                # broadcast function
+                for node in self.__peer_nodes:
+                    url = 'http://{}/broadcast-transaction'.format(node)
+                    try:
+                        response = requests.post(url, json={
+                            'sender': sender,
+                            'recipient': recipient,
+                            'amount': amount,
+                            'signature': signature
+                        })
+                        if response.status_code == 400 or response.status_code == 500:
+                            print('Transaction declined, needs resolving.')
+                            return False
+                    except requests.exceptions.ConnectionError:
+                        continue
+
             return True
         return False
 
@@ -126,7 +162,7 @@ class Blockchain:
     def mine_block(self):
         """ Creates a new block for the block chain and
         adds open transactions to it. """
-        if self.__hosting_node is None:
+        if self.__public_key is None:
             return None
         
         last_hash = hash_block(self.get_last_block())
@@ -134,7 +170,7 @@ class Blockchain:
 
         reward_transaction = Transaction(
             'REWARDING SYSTEM',
-            self.__hosting_node,
+            self.__public_key,
             MINING_REWARD,
             ''
         )
@@ -156,12 +192,99 @@ class Blockchain:
         self.__chain.append(block)
         self.__open_transactions = []
         self.__save_data()
+
+        # broadcast function
+        for node in self.__peer_nodes:
+            url = 'http://{}/broadcast-block'.format(node)
+            try:
+                response = requests.post(url, json={'block': block.to_dict()})
+                if response.status_code == 400 or response.status_code == 500:
+                    print('Block declined, needs resolving.')
+                if response.status_code == 409:
+                    self.__resolve_conflicts = True
+            except requests.exceptions.ConnectionError:
+                continue
+
         return block
+
+    def add_block(self, block):
+        """ """
+        transactions = [
+            Transaction(
+                tx['sender'],
+                tx['recipient'],
+                tx['amount'],
+                tx['signature']
+            )
+            for tx in block['transactions']
+        ]
+
+        proof_is_valid = Verifier.valid_proof(
+            transactions[:-1],
+            block['previous_hash'],
+            block['proof']
+        )
+
+        hashes_match = block['previous_hash'] == hash_block(self.get_last_block())
+
+        if not (proof_is_valid or hashes_match):
+            return False
+
+        self.__chain.append(
+            Block(
+                block['index'],
+                block['previous_hash'],
+                transactions,
+                block['proof'],
+                block['timestamp']
+            )
+        )
+
+        # func of sync open transactions in peer-2-peer network
+        stored_transactions = self.__open_transactions[:]
+        for input_tx in block['transactions']:
+            for open_tx in stored_transactions:
+                if open_tx.sender == input_tx['sender'] and open_tx.recipient == input_tx['recipient'] and open_tx.amount == input_tx['amount'] and open_tx.signature == input_tx['signature']:
+                    try:
+                        self.__open_transactions.remove(open_tx)
+                    except ValueError:
+                        print('Item was already removed.')
+        
+        self.__save_data()
+        return True
+
+    def resolve(self):
+        replace = False
+        winner_chain = self.__chain
+
+        for node in self.__peer_nodes:
+            url = 'http://{}/blockchain'.format(node)
+            try:
+                response = requests.get(url)
+                node_chain = response.json()
+
+                node_chain = self.__loadable_blockchain(node_chain)
+                node_chain_length = len(node_chain)
+                local_chain_length = len(winner_chain)
+
+                if node_chain_length > local_chain_length and Verifier.verify_chain(node_chain):
+                    winner_chain = node_chain
+                    replace = True
+            except requests.exceptions.ConnectionError:
+                continue
+
+        self.__resolve_conflicts = False
+        self.__chain = winner_chain
+        if replace:
+            self.__open_transactions = []
+
+        self.__save_data()
+        return replace
 
     def __load_data(self):
         """ Initializes a blockhain and open transactions from a file. """
         try:
-            with open(file='blockchain.dat', mode='r', encoding='utf-8') as f:
+            with open(file='blockchain-{}.dat'.format(self.__node_id), mode='r', encoding='utf-8') as f:
                 file_content = f.readlines()
 
                 blockchain = json.loads(file_content[0][:-1])
@@ -188,7 +311,7 @@ class Blockchain:
         )
         
         try:
-            with open(file='blockchain.dat', mode='w', encoding='utf-8') as f:
+            with open(file='blockchain-{}.dat'.format(self.__node_id), mode='w', encoding='utf-8') as f:
                 for data in prepared_data:
                     f.write(json.dumps(data))
                     f.write('\n')
